@@ -206,33 +206,52 @@ def update_history(global_attrs, cube: xr.Dataset = None, command: str = None):
     if "xcube gen" in command:
         if "history" in cube.attrs:
             history = json.loads(cube.attrs["history"])
-            for command in history:
-                if 'xcube gen' in command['command']:
-                    command['log'].append(
-                        {"mode": global_attrs.pop('update_mode'),
-                         "index": _get_time_index(cube, global_attrs.pop('time_index')),
-                         "start_time": datetime.datetime.utcnow().isoformat(),
-                         "processing_time": f"{global_attrs.pop('processing_time')} seconds",
-                         "input": global_attrs.pop('input_file')})
+            if "xcube_commands" in history and 'xcube gen' in history["xcube_commands"]['command']:
+                history["xcube_commands"]['log'].append(
+                    {"mode": global_attrs.pop('update_mode'),
+                     "index": _get_time_index(cube, global_attrs.pop('time_index')),
+                     "start_time": datetime.datetime.utcnow().isoformat(),
+                     "processing_time": f"{global_attrs.pop('processing_time')} seconds",
+                     "input": global_attrs.pop('input_file')})
+                global_attrs.pop('gen_params')
+            else:
+                history = json.dumps(
+                    {"prior_history": history, "xcube_commands":
+                        {
+                            "command": command,
+                            "start_time": datetime.datetime.utcnow().isoformat(),
+                            "config": global_attrs.pop('gen_params'),
+                            "log": [{"mode": global_attrs.pop('update_mode'),
+                                     "index": _get_time_index(cube, global_attrs.pop('time_index')),
+                                     "start_time": datetime.datetime.utcnow().isoformat(),
+                                     "processing_time": f"{global_attrs.pop('processing_time')} seconds",
+                                     "input": global_attrs.pop('input_file')}]
+                        }
+                     })
             cube.attrs["history"] = json.dumps(history)
-            global_attrs.update(cube.attrs)
+
         else:
-            global_attrs['history'] = json.dumps([
-                {
-                    "command": command,
-                    "start_time": datetime.datetime.utcnow().isoformat(),
-                    "config": global_attrs.pop('gen_params'),
-                    "log": [{"mode": global_attrs.pop('update_mode'), "index": 0,
-                             "start_time": datetime.datetime.utcnow().isoformat(),
-                             "processing_time": f"{global_attrs.pop('processing_time')} seconds",
-                             "input": global_attrs.pop('input_file')}]
-                }
-            ])
-            global_attrs.update(cube.attrs)
+            global_attrs['history'] = json.dumps(
+                {"prior_history": global_attrs["history"], "xcube_commands":
+                    {
+                        "command": command,
+                        "start_time": datetime.datetime.utcnow().isoformat(),
+                        "config": global_attrs.pop('gen_params'),
+                        "log": [{"mode": global_attrs.pop('update_mode'),
+                                 "index": _get_time_index(cube, global_attrs.pop('time_index')),
+                                 "start_time": datetime.datetime.utcnow().isoformat(),
+                                 "processing_time": f"{global_attrs.pop('processing_time')} seconds",
+                                 "input": global_attrs.pop('input_file')}]
+                    }
+                 })
+        global_attrs.update(cube.attrs)
+
     return global_attrs
 
 
 def _get_time_index(cube, time_index):
     if time_index == -1:
         time_index = len(cube.time) - 1
+    elif time_index is None:
+        time_index = 0
     return time_index

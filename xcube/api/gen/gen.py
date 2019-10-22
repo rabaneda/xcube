@@ -297,30 +297,26 @@ def _process_input(input_processor: InputProcessor,
 
     def step9(input_slice):
         if update_mode == 'create':
-            global_attrs = dict(input_file=os.path.basename(input_file), update_mode=update_mode,
-                                processing_time=time.perf_counter() - total_t1,
-                                gen_params=(dict(
-                                    input_processor=input_processor.name,
-                                    input_reader=input_reader.name,
-                                    output_writer=output_writer.name,
-                                    output_writer_params=output_writer_params,
-                                    output_size=output_size,
-                                    output_region=output_region,
-                                    output_resampling=output_resampling,
-                                    output_variables=output_variables,
-                                    processed_variables=processed_variables
-                                )))
-            if output_metadata:
-                global_attrs.update(output_metadata)
             temporal_only = False
         else:
-            global_attrs = dict(input_file=os.path.basename(input_file),
-                                update_mode=update_mode,
-                                time_index=time_index,
-                                processing_time=time.perf_counter() - total_t1
-                                )
             temporal_only = True
 
+        global_attrs = dict(input_file=os.path.basename(input_file), update_mode=update_mode,
+                            processing_time=time.perf_counter() - total_t1, time_index=time_index,
+                            history=None,
+                            gen_params=(dict(
+                                input_processor=input_processor.name,
+                                input_reader=input_reader.name,
+                                output_writer=output_writer.name,
+                                output_writer_params=output_writer_params,
+                                output_size=output_size,
+                                output_region=output_region,
+                                output_resampling=output_resampling,
+                                output_variables=output_variables,
+                                processed_variables=processed_variables
+                            )))
+        if output_metadata:
+            global_attrs.update(output_metadata)
         _update_cube_attrs(output_writer, output_path, global_attrs=global_attrs, temporal_only=temporal_only)
 
         return input_slice

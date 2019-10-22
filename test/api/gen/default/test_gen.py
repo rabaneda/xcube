@@ -137,14 +137,18 @@ class DefaultProcessTest(unittest.TestCase):
             if v is not None:
                 self.assertEqual(v, cube.attrs[k], msg=f'key {k!r}')
 
-    def test_history(self):
+    def test_history_without_prior_history(self):
         f = open((os.path.join(os.path.dirname(__file__), 'inputdata', "input.txt")), "w+")
         for i in range(1, 4):
             file_name = "2017010" + str(i) + "-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc"
             file = get_inputdata_path(file_name)
             f.write("%s\n" % file)
         f.close()
-        status, output = gen_cube_wrapper([get_inputdata_path('input.txt')], 'l2c.zarr', sort_mode=True)
+        output_metadata = dict(
+            title='Test Cube',
+            project='xcube',
+        )
+        status, output = gen_cube_wrapper([get_inputdata_path('input.txt')], 'l2c.zarr', sort_mode=True,output_metadata=output_metadata)
         self.assertEqual(True, status)
         ds = xr.open_zarr('l2c.zarr')
         self.assertNotIn('gen_params', ds.attrs.keys())
@@ -161,10 +165,45 @@ class DefaultProcessTest(unittest.TestCase):
                               'output_variables': [['analysed_sst', None]],
                               'output_writer': 'zarr',
                               'output_writer_params': {},
-                              'processed_variables': None}, history[0]["config"])
-        self.assertEqual('xcube gen', history[0]["command"])
+                              'processed_variables': None}, history['xcube_commands']["config"])
+        self.assertEqual('xcube gen', history['xcube_commands']["command"])
         self.assertEqual("dict_keys(['mode', 'index', 'start_time', 'processing_time', 'input'])",
-                         str(history[0]["log"][0].keys()))
+                         str(history['xcube_commands']["log"][0].keys()))
+
+    def test_history_with_prior_history(self):
+        f = open((os.path.join(os.path.dirname(__file__), 'inputdata', "input.txt")), "w+")
+        for i in range(1, 4):
+            file_name = "2017010" + str(i) + "-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc"
+            file = get_inputdata_path(file_name)
+            f.write("%s\n" % file)
+        f.close()
+        output_metadata = dict(
+            title='Test Cube',
+            project='xcube',
+            history='longtimeago'
+        )
+        status, output = gen_cube_wrapper([get_inputdata_path('input.txt')], 'l2c.zarr', sort_mode=True,output_metadata=output_metadata)
+        self.assertEqual(True, status)
+        ds = xr.open_zarr('l2c.zarr')
+        self.assertNotIn('gen_params', ds.attrs.keys())
+        self.assertIn('history', ds.attrs.keys())
+        self.assertIn('create', ds.attrs["history"])
+        self.assertIn('append', ds.attrs["history"])
+        self.assertIn('longtimeago', ds.attrs["history"])
+        self.assertIn('processing_time', ds.attrs["history"])
+        history = json.loads(ds.attrs["history"])
+        self.assertDictEqual({'input_processor': 'default',
+                              'input_reader': 'netcdf4',
+                              'output_region': [-4.0, 47.0, 12.0, 56.0],
+                              'output_resampling': 'Nearest',
+                              'output_size': [320, 180],
+                              'output_variables': [['analysed_sst', None]],
+                              'output_writer': 'zarr',
+                              'output_writer_params': {},
+                              'processed_variables': None}, history['xcube_commands']["config"])
+        self.assertEqual('xcube gen', history['xcube_commands']["command"])
+        self.assertEqual("dict_keys(['mode', 'index', 'start_time', 'processing_time', 'input'])",
+                         str(history['xcube_commands']["log"][0].keys()))
 
     def test_handle_360_lon(self):
         status, output = gen_cube_wrapper(
@@ -190,7 +229,7 @@ class DefaultProcessTest(unittest.TestCase):
 
 
 # noinspection PyShadowingBuiltins
-def gen_cube_wrapper(input_paths, output_path, sort_mode=False, input_processor_name=None) \
+def gen_cube_wrapper(input_paths, output_path, sort_mode=False, input_processor_name=None, output_metadata=None) \
         -> Tuple[bool, Optional[str]]:
     output = None
 
@@ -211,10 +250,10 @@ def gen_cube_wrapper(input_paths, output_path, sort_mode=False, input_processor_
         output_variables='analysed_sst',
         sort_mode=sort_mode,
     )
-
-    output_metadata = dict(
-        title='Test Cube',
-        project='xcube',
-    )
+    if output_metadata is None:
+        output_metadata = dict(
+            title='Test Cube',
+            project='xcube',
+        )
 
     return gen_cube(dry_run=False, monitor=output_monitor, output_metadata=output_metadata, **config), output
