@@ -20,6 +20,7 @@
 # SOFTWARE.
 
 import datetime
+import json
 from typing import Any, Dict
 
 import xarray as xr
@@ -38,10 +39,7 @@ _TIME_ATTRS_DATA = ('time', 'time_bnds', None,
 
 
 def update_dataset_attrs(dataset: xr.Dataset,
-                         input_path: str = None,
-                         update_mode: str = None,
                          global_attrs: Dict[str, Any] = None,
-                         history: Dict[str, Any] = None,
                          update_existing: bool = False,
                          in_place: bool = False) -> xr.Dataset:
     """
@@ -49,10 +47,7 @@ def update_dataset_attrs(dataset: xr.Dataset,
     to spatio-temporal coordinate variables time, lat, and lon.
 
     :param dataset: The dataset.
-    :param update_mode: Mode of updating xcube dataset.
-    :param input_path: The input data path.
     :param global_attrs: Optional global attributes.
-    :param history: xcube dataset creation parameters.
     :param update_existing: If ``True``, any existing attributes will be updated.
     :param in_place: If ``True``, *dataset* will be modified in place and returned.
     :return: A new dataset, if *in_place* if ``False`` (default), else the passed and modified *dataset*.
@@ -64,8 +59,6 @@ def update_dataset_attrs(dataset: xr.Dataset,
         dataset.attrs.update(global_attrs)
 
     return _update_dataset_attrs(dataset, [_LON_ATTRS_DATA, _LAT_ATTRS_DATA, _TIME_ATTRS_DATA],
-                                 update_mode=update_mode,
-                                 input_path=input_path, history=history,
                                  update_existing=update_existing, in_place=True)
 
 
@@ -85,29 +78,22 @@ def update_dataset_spatial_attrs(dataset: xr.Dataset,
 
 
 def update_dataset_temporal_attrs(dataset: xr.Dataset,
-                                  input_path: str = None,
-                                  update_mode: str = None,
                                   update_existing: bool = False,
                                   in_place: bool = False) -> xr.Dataset:
     """
     Update temporal CF/THREDDS attributes of given *dataset*.
 
     :param dataset: The dataset.
-    :param update_mode: Mode of updating xcube dataset.
-    :param input_path: The input data path.
     :param update_existing: If ``True``, any existing attributes will be updated.
     :param in_place: If ``True``, *dataset* will be modified in place and returned.
     :return: A new dataset, if *in_place* is ``False`` (default), else the passed and modified *dataset*.
     """
-    return _update_dataset_attrs(dataset, [_TIME_ATTRS_DATA], update_mode=update_mode, input_path=input_path,
+    return _update_dataset_attrs(dataset, [_TIME_ATTRS_DATA],
                                  update_existing=update_existing, in_place=in_place)
 
 
 def _update_dataset_attrs(dataset: xr.Dataset,
                           coord_data,
-                          update_mode: str = None,
-                          input_path: str = None,
-                          history: Dict[str, Any] = None,
                           update_existing: bool = False,
                           in_place: bool = False) -> xr.Dataset:
     if not in_place:
@@ -153,17 +139,6 @@ def _update_dataset_attrs(dataset: xr.Dataset,
                 dataset.attrs[coord_res_attr_name] = coord_res if coord_res > 0 else -coord_res
 
     dataset.attrs['date_modified'] = datetime.datetime.utcnow().isoformat()
-    if update_mode:
-        if update_mode == "create":
-            dataset.attrs[
-                "history"] = f"[{datetime.datetime.utcnow().isoformat()}] {update_mode} xcube dataset with {input_path} \n" \
-                             f"with the parameters: {history} \n"
-        else:
-            if 'history' in dataset.attrs.keys():
-                dataset.attrs["history"] = f"{dataset.attrs['history']} \n " \
-                                           f"[{datetime.datetime.utcnow().isoformat()}] {update_mode} {input_path}"
-            else:
-                dataset.attrs["history"] = f"[{datetime.datetime.utcnow().isoformat()}] {update_mode} {input_path} \n"
 
     return dataset
 
@@ -218,3 +193,46 @@ def update_dataset_var_attrs(dataset: xr.Dataset,
             var.attrs.update(var_attrs)
 
     return dataset
+
+
+def update_history(global_attrs, cube: xr.Dataset = None, command: str = None):
+    """
+    Update history in global attributes of given *dataset*.
+
+    :param global_attrs: A dictionary with global attribute keys and values to be used in the global metadata.
+    :param cube: The dataset, which metadata is updated.
+    :param command: The xcube command changing the xucbe dataset. Currently only implemented for xcube gen.
+    """
+    if "xcube gen" in command:
+        if "history" in cube.attrs:
+            history = json.loads(cube.attrs["history"])
+            for command in history:
+                if 'xcube gen' in command['command']:
+                    command['log'].append(
+                        {"mode": global_attrs.pop('update_mode'),
+                         "index": _get_time_index(cube, global_attrs.pop('time_index')),
+                         "start_time": datetime.datetime.utcnow().isoformat(),
+                         "processing_time": f"{global_attrs.pop('processing_time')} seconds",
+                         "input": global_attrs.pop('input_file')})
+            cube.attrs["history"] = json.dumps(history)
+            global_attrs.update(cube.attrs)
+        else:
+            global_attrs['history'] = json.dumps([
+                {
+                    "command": command,
+                    "start_time": datetime.datetime.utcnow().isoformat(),
+                    "config": global_attrs.pop('gen_params'),
+                    "log": [{"mode": global_attrs.pop('update_mode'), "index": 0,
+                             "start_time": datetime.datetime.utcnow().isoformat(),
+                             "processing_time": f"{global_attrs.pop('processing_time')} seconds",
+                             "input": global_attrs.pop('input_file')}]
+                }
+            ])
+            global_attrs.update(cube.attrs)
+    return global_attrs
+
+
+def _get_time_index(cube, time_index):
+    if time_index == -1:
+        time_index = len(cube.time) - 1
+    return time_index

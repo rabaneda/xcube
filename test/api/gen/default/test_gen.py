@@ -1,3 +1,4 @@
+import json
 import os
 import unittest
 from typing import Tuple, Optional, Dict, Any
@@ -31,7 +32,7 @@ class DefaultProcessTest(unittest.TestCase):
         status, output = gen_cube_wrapper(
             [get_inputdata_path('20170101-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c-single.nc')
         self.assertEqual(True, status)
-        self.assertTrue('\nstep 8 of 8: creating input slice in l2c-single.nc...\n' in output)
+        self.assertTrue('\nstep 8 of 9: creating input slice in l2c-single.nc...\n' in output)
         self.assert_cube_ok(xr.open_dataset('l2c-single.nc', autoclose=True), 1,
                             dict(date_modified=None,
                                  time_coverage_start='2016-12-31T12:00:00.000000000',
@@ -42,8 +43,8 @@ class DefaultProcessTest(unittest.TestCase):
             [get_inputdata_path('201701??-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c.nc',
             sort_mode=True)
         self.assertEqual(True, status)
-        self.assertTrue('\nstep 8 of 8: creating input slice in l2c.nc...\n' in output)
-        self.assertTrue('\nstep 8 of 8: appending input slice to l2c.nc...\n' in output)
+        self.assertTrue('\nstep 8 of 9: creating input slice in l2c.nc...\n' in output)
+        self.assertTrue('\nstep 8 of 9: appending input slice to l2c.nc...\n' in output)
         self.assert_cube_ok(xr.open_dataset('l2c.nc', autoclose=True), 3,
                             dict(date_modified=None,
                                  time_coverage_start='2016-12-31T12:00:00.000000000',
@@ -53,7 +54,7 @@ class DefaultProcessTest(unittest.TestCase):
         status, output = gen_cube_wrapper(
             [get_inputdata_path('20170101-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c-single.zarr')
         self.assertEqual(True, status)
-        self.assertTrue('\nstep 8 of 8: creating input slice in l2c-single.zarr...\n' in output)
+        self.assertTrue('\nstep 8 of 9: creating input slice in l2c-single.zarr...\n' in output)
         self.assert_cube_ok(xr.open_zarr('l2c-single.zarr'), 1,
                             dict(date_modified=None,
                                  time_coverage_start='2016-12-31T12:00:00.000000000',
@@ -64,8 +65,8 @@ class DefaultProcessTest(unittest.TestCase):
             [get_inputdata_path('201701??-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c.zarr',
             sort_mode=True)
         self.assertEqual(True, status)
-        self.assertTrue('\nstep 8 of 8: creating input slice in l2c.zarr...\n' in output)
-        self.assertTrue('\nstep 8 of 8: appending input slice to l2c.zarr...\n' in output)
+        self.assertTrue('\nstep 8 of 9: creating input slice in l2c.zarr...\n' in output)
+        self.assertTrue('\nstep 8 of 9: appending input slice to l2c.zarr...\n' in output)
         self.assert_cube_ok(xr.open_zarr('l2c.zarr'), 3,
                             dict(date_modified=None,
                                  time_coverage_start='2016-12-31T12:00:00.000000000',
@@ -78,9 +79,9 @@ class DefaultProcessTest(unittest.TestCase):
              get_inputdata_path('20170101-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c.zarr',
             sort_mode=False)
         self.assertEqual(True, status)
-        self.assertTrue('\nstep 8 of 8: creating input slice in l2c.zarr...\n' in output)
-        self.assertTrue('\nstep 8 of 8: appending input slice to l2c.zarr...\n' in output)
-        self.assertTrue('\nstep 8 of 8: inserting input slice before index 0 in l2c.zarr...\n' in output)
+        self.assertTrue('\nstep 8 of 9: creating input slice in l2c.zarr...\n' in output)
+        self.assertTrue('\nstep 8 of 9: appending input slice to l2c.zarr...\n' in output)
+        self.assertTrue('\nstep 8 of 9: inserting input slice before index 0 in l2c.zarr...\n' in output)
         self.assert_cube_ok(xr.open_zarr('l2c.zarr'), 3,
                             dict(date_modified=None,
                                  time_coverage_start='2016-12-31T12:00:00.000000000',
@@ -94,9 +95,9 @@ class DefaultProcessTest(unittest.TestCase):
              get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c.zarr',
             sort_mode=False)
         self.assertEqual(True, status)
-        self.assertTrue('\nstep 8 of 8: creating input slice in l2c.zarr...\n' in output)
-        self.assertTrue('\nstep 8 of 8: appending input slice to l2c.zarr...\n' in output)
-        self.assertTrue('\nstep 8 of 8: replacing input slice at index 1 in l2c.zarr...\n' in output)
+        self.assertTrue('\nstep 8 of 9: creating input slice in l2c.zarr...\n' in output)
+        self.assertTrue('\nstep 8 of 9: appending input slice to l2c.zarr...\n' in output)
+        self.assertTrue('\nstep 8 of 9: replacing input slice at index 1 in l2c.zarr...\n' in output)
         self.assert_cube_ok(xr.open_zarr('l2c.zarr'), 3,
                             dict(date_modified=None,
                                  time_coverage_start='2016-12-31T12:00:00.000000000',
@@ -146,9 +147,24 @@ class DefaultProcessTest(unittest.TestCase):
         status, output = gen_cube_wrapper([get_inputdata_path('input.txt')], 'l2c.zarr', sort_mode=True)
         self.assertEqual(True, status)
         ds = xr.open_zarr('l2c.zarr')
+        self.assertNotIn('gen_params', ds.attrs.keys())
         self.assertIn('history', ds.attrs.keys())
         self.assertIn('create', ds.attrs["history"])
         self.assertIn('append', ds.attrs["history"])
+        self.assertIn('processing_time', ds.attrs["history"])
+        history = json.loads(ds.attrs["history"])
+        self.assertDictEqual({'input_processor': 'default',
+                              'input_reader': 'netcdf4',
+                              'output_region': [-4.0, 47.0, 12.0, 56.0],
+                              'output_resampling': 'Nearest',
+                              'output_size': [320, 180],
+                              'output_variables': [['analysed_sst', None]],
+                              'output_writer': 'zarr',
+                              'output_writer_params': {},
+                              'processed_variables': None}, history[0]["config"])
+        self.assertEqual('xcube gen', history[0]["command"])
+        self.assertEqual("dict_keys(['mode', 'index', 'start_time', 'processing_time', 'input'])",
+                         str(history[0]["log"][0].keys()))
 
     def test_handle_360_lon(self):
         status, output = gen_cube_wrapper(
