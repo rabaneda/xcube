@@ -126,11 +126,6 @@ def gen_cube(input_paths: Sequence[str] = None,
         def monitor(*args):
             pass
 
-    input_paths = [input_file for f in input_paths for input_file in glob.glob(f, recursive=True)]
-
-    if not no_sort_mode and len(input_paths) > 1:
-        input_paths = _get_sorted_input_paths(input_processor, input_paths)
-
     if not dry_run:
         output_dir = os.path.abspath(os.path.dirname(output_path))
         os.makedirs(output_dir, exist_ok=True)
@@ -140,6 +135,11 @@ def gen_cube(input_paths: Sequence[str] = None,
 
     effective_output_writer_params = output_writer_params or {}
 
+    input_paths = [input_file for f in input_paths for input_file in glob.glob(f, recursive=True)]
+
+    if not no_sort_mode and len(input_paths) > 1:
+        input_paths = _get_sorted_input_paths(input_reader, effective_input_reader_params, input_processor, input_paths,
+                                              monitor)
     status = False
 
     ds_count = len(input_paths)
@@ -348,14 +348,21 @@ def _update_cube_attrs(output_writer: DatasetIO, output_path: str,
     output_writer.update(output_path, global_attrs=global_attrs)
 
 
-def _get_sorted_input_paths(input_processor, input_paths: Sequence[str]):
+def _get_sorted_input_paths(input_reader: DatasetIO, input_reader_params: Dict[str, Any],
+                            input_processor: InputProcessor, input_paths: Sequence[str],
+                            monitor: Callable[..., None] = None):
     input_path_list = []
     time_list = []
     for input_file in input_paths:
-        with xr.open_dataset(input_file) as dataset:
-            t1, t2 = input_processor.get_time_range(dataset)
-            time_list.append((t1 + t2) / 2)
-            input_path_list.append(input_file)
-            tuple_seq = zip(time_list, input_path_list)
-    input_paths = [e[1] for e in sorted(tuple_seq, key=lambda e: e[0])]
+        try:
+            dataset = input_reader.read(input_file, **input_reader_params)
+        except OSError as e:
+            monitor(f'Error: something went wrong during opening input file {input_file}, skipping input slice: {e}')
+            continue
+        t1, t2 = input_processor.get_time_range(dataset)
+        time_list.append((t1 + t2) / 2)
+        input_path_list.append(input_file)
+        tuple_seq = zip(time_list, input_path_list)
+
+    input_paths = [i[1] for i in sorted(tuple_seq, key=lambda i: i[0])]
     return input_paths

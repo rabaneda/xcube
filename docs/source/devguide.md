@@ -5,17 +5,6 @@ Version 0.2, draft
 *IMPORTANT NOTE: Any changes to this doc must be reviewed by dev-team 
 through pull requests.* 
 
-## Preface
-
-> _Gedacht ist nicht gesagt._  
-> _Gesagt ist nicht gehört._  
-> _Gehört ist nicht verstanden._  
-> _Verstanden ist nicht einverstanden._  
-> _Einverstanden ist nicht umgesetzt._  
-> _Umgesetzt ist nicht beibehalten._  
-       
-by Konrad Lorenz (translation is left to the reader)
-
 
 ## Table of Contents
 
@@ -351,6 +340,7 @@ test viewer with latest xcube Web API. Then release a new xcube viewer.
   - Paste latest changes from `CHANGES.md` into field "Describe this release".
   - Press "Publish release" button.
 * Deploy build contents to any relevant web content providers.
+* Merge `master` branch into `master_dcs4cop` and `master_cyanoalert`, push both.
 * After the release on GitHub, if the branch was `master`, 
   create a new maintenance branch (see above).
 * Increase version in `package.json` and `VIEWER_VERSION` constant in `src/config.ts` 

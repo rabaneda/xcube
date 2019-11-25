@@ -1,4 +1,8 @@
-## Changes in 0.4.0 (in development)
+## Changes in 0.3.1 (in development)
+
+### Fixes
+* `xcube gen` does not fail when an input file cannot be opened for presorting, 
+  the input file is skipped. #246
 
 ## Changes in 0.3.0
 
