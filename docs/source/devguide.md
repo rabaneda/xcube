@@ -5,17 +5,6 @@ Version 0.2, draft
 *IMPORTANT NOTE: Any changes to this doc must be reviewed by dev-team 
 through pull requests.* 
 
-## Preface
-
-> _Gedacht ist nicht gesagt._  
-> _Gesagt ist nicht gehört._  
-> _Gehört ist nicht verstanden._  
-> _Verstanden ist nicht einverstanden._  
-> _Einverstanden ist nicht umgesetzt._  
-> _Umgesetzt ist nicht beibehalten._  
-       
-by Konrad Lorenz (translation is left to the reader)
-
 
 ## Table of Contents
 
@@ -293,5 +282,70 @@ e.g. `coolguy-7633-div_by_zero_in_mean-fix`. After a pull request,
 the development branch will first be merged into the 
 `<major>.<minor>.x` branch then into `master`.
 
+## Release Process
 
- 
+### xcube
+
+* Check issues in progress, close any open issues that have been fixed.
+* In `xcube/version.py` remove the `.dev` suffix from version name.
+* Make sure `CHANGES.md` is complete. Remove the suffix ` (in development)` from the last version headline.
+* Push changes to either master or a new maintenance branch (see above).
+* Await results from Travis CI and ReadTheDocs builds. If broken, fix.
+* Goto [xcube/releases](https://github.com/dcs4cop/xcube/releases) and press button "Draft a new Release".
+  - Tag version is: `v${version}` (with a "v" prefix)
+  - Release title is: `${version}` 
+  - Paste latest changes from `CHANGES.md` into field "Describe this release"
+  - Press "Publish release" button
+* After the release on GitHub, rebase sources, if the branch was `master`, 
+  create a new maintenance branch (see above)
+* In `xcube/version.py` increase version number and append a `.dev0` suffix to version name so 
+  that it is still PEP-440 compatible.
+* In `CHANGES.md` add a new version headline and attach ` (in development)` to it.
+* Push changes to either master or a new maintenance branch (see above).
+* Activate new doc version on ReadTheDocs. 
+
+Go through the same procedure for all xcube plugin packages dependent on this version of xcube.
+
+TODO: Describe deployment to xcube conda package after release
+TODO: Describe deployment of xcube Docker image after release
+
+If any changes apply to `xcube serve` and the xcube Web API:
+
+Make sure changes are reflected in `xcube/webapi/res/openapi.yml`. 
+If there are changes, sync `xcube/webapi/res/openapi.yml` with 
+xcube Web API docs on SwaggerHub.
+
+Check if changes affect the xcube-viewer code. If so
+make sure changes are reflected in xcube-viewer code and 
+test viewer with latest xcube Web API. Then release a new xcube viewer.
+
+### xcube Viewer 
+
+* Cd into viewer project directory (`.../xcube-viewer/.`).
+* Remove the `-dev` suffix from `version` property in `package.json`.
+* Remove the `-dev` suffix from `VIEWER_VERSION` constant in `src/config.ts`.
+* Make sure `CHANGES.md` is complete. Remove the suffix ` (in development)` 
+  from the last version headline.
+* Build the app and test the build using a local http-server, e.g.:
+
+    $ npm install -g http-server
+    $ cd build 
+    $ http-server -p 3000 -c-1
+
+* Push changes to either master or a new maintenance branch (see above).
+* Goto [xcube-viewer/releases](https://github.com/dcs4cop/xcube-viewer/releases) 
+  and press button "Draft a new Release".
+  - Tag version is: `v${version}` (with a "v" prefix).
+  - Release title is: `${version}`. 
+  - Paste latest changes from `CHANGES.md` into field "Describe this release".
+  - Press "Publish release" button.
+* Merge `master` branch into `master_dcs4cop` and `master_cyanoalert`, 
+  adjust versions and `CHANGES.md` as described above and push both branches.
+* After the release on GitHub, if the branch was `master`, 
+  create a new maintenance branch (see above).
+* Increase version in `package.json` and `VIEWER_VERSION` constant in `src/config.ts` 
+  and append `-dev.0` suffix to version name so it is SemVer compatible.
+* In `CHANGES.md` add a new version headline and attach ` (in development)` to it.
+* Push changes to either master or a new maintenance branch (see above).
+* Deploy builds of `master`, `master_dcs4cop`, and `master_cyanoalert` branches 
+  to related web content providers.

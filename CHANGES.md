@@ -1,4 +1,11 @@
-## Changes in 0.3.0 (in development)
+## Changes in 0.3.1. (in development)
+
+### Fix
+
+* Removing false user warning about custom SNAP colormaps when starting 
+  xcube serve
+  
+## Changes in 0.3.0
 
 ### New
 * xcube now may first make a spatial subset input file according to the area of 
@@ -18,6 +25,10 @@
   hidden `xcube apply` command. (#167) 
 * Added new function `xcube.core.geom.rasterize_features()` 
   to rasterize vector-data features into a dataset. (#222)
+* Extended CLI command `xcube verify` and API function `xcube.core.verify.verify_cube` to check whether spatial coordinate variables and their associated bounds variables are equidistant. (#231)
+* Made xarray version 0.14.1 minimum requirement due to deprecation of xarray's `Dataset.drop`
+  method and replaced it with `drop_sel` and `drop_vars` accordingly. 
+
 
 ### Enhancements
 
@@ -31,7 +42,15 @@
   - `xcube.core.geom`
   - `xcube.core.schema`
   - `xcube.core.verify`
-   
+* Sometimes the cell bounds coordinate variables of a given coordinate variables are not in a proper, 
+  [CF compliant](http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#cell-boundaries) 
+  order, e.g. for decreasing latitudes `lat` the respective bounds coordinate
+  `lat_bnds` is decreasing for `lat_bnds[:, 0]` and `lat_bnds[:, 1]`, but `lat_bnds[i, 0] < lat_bnds[i, 1]`
+  for all `i`. xcube is now more tolerant w.r.t. to such wrong ordering of cell boundaries and will 
+  compute the correct spatial extent. (#233)
+* For `xcube serve`, any undefined color bar name will default to `"viridis"`. (#238)
+    
+ 
 ### Fixes
 
 * `xcube resample` now correctly re-chunks its output. By default, chunking of the 
@@ -63,7 +82,7 @@ versions.
   - removed functions `read_cube` and `read_dataset` as `open_cube` and `open_dataset` are sufficient
   - all internal module imports are now absolute, rather than relative  
 
-## Changes in 0.2.1 (in development)
+## Changes in 0.2.1
 
 ### Enhancements
 
@@ -90,6 +109,8 @@ versions.
 
 * Reorganisation of the Documentation and Examples Section (partly addressing #106)
 * Loosened python conda environment to satisfy conda-forge requirements
+* xcube is now available as a conda package on the conda-forge channel. To install latest xcube package, you can now type: `conda install -c conda-forge xcube`
+* Changed the unittesting code to minimize warnings reported by 3rd-party packages
 * Making CLI parameters consistent and removing or changing parameter abbreviations in case they were used twice for different params. (partly addressing #91)
   For every CLI command which is generating an output a path must be provided by the option `-o`, `--output`. If not provided by the user, a default output_path is generated.
   The following CLI parameter have changed and their abbreviation is not enabled anymore : 
@@ -225,4 +246,3 @@ xcube's organisation. (#49)
 * Request for obtaining a legend for a layer of given by a variable of a data set was added.
 * Added a Dockerfile to build an xcube docker image and to run the demo
 * The RESTful time-series API now returns ISO-formatted UTC dates [#26](https://github.com/dcs4cop/xcube-server/issues/26)
-
