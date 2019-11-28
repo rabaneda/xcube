@@ -120,18 +120,7 @@ class InputProcessor(ExtensionComponent, metaclass=ABCMeta):
         """
         return None
 
-    def get_spatial_subset(self, dataset: xr.Dataset, dst_region: Tuple[float, float, float, float]) -> xr.Dataset:
-        """
-        Get spatial subset based on dst_region.
-
-        Returns ``dataset`` by default.
-        :param dataset: The dataset.
-        :param dst_region: The region taken for the spatial subset
-        :return: A spatial subset of the dataset.
-        """
-        return dataset
-
-    def pre_process(self, dataset: xr.Dataset) -> xr.Dataset:
+    def pre_process(self, dataset: xr.Dataset, output_region: Tuple[float, float, float, float]) -> xr.Dataset:
         """
         Do any pre-processing before reprojection.
         All variables in the output dataset must be 2D arrays with dimensions "lat" and "lon", in this order.
@@ -140,6 +129,7 @@ class InputProcessor(ExtensionComponent, metaclass=ABCMeta):
         The default implementation returns the unchanged *dataset*.
 
         :param dataset: The dataset.
+        :param output_region: bounding box of the region of interest.
         :return: The pre-processed dataset or the original one, if no pre-processing is required.
         """
         return dataset
@@ -262,32 +252,20 @@ class DefaultInputProcessor(XYInputProcessor):
     def input_reader(self) -> str:
         return self._input_reader
 
-    def pre_process(self, dataset: xr.Dataset) -> xr.Dataset:
+    def pre_process(self, dataset: xr.Dataset, output_region: Tuple[float, float, float, float]) -> xr.Dataset:
         self._validate(dataset)
-
         if "time" in dataset:
             # Remove time dimension of length 1.
             dataset = dataset.squeeze("time")
-
-        return _normalize_lon_360(dataset)
-
-    def get_spatial_subset(self, dataset: xr.Dataset, dst_region: Tuple[float, float, float, float]) -> xr.Dataset:
-        lon_min, lat_min, lon_max, lat_max = dst_region
-        dataset_subset = dataset.copy()
-        dataset_subset.coords['x'] = xr.DataArray(np.arange(0, dataset.lon.size), dims='lon')
-        dataset_subset.coords['y'] = xr.DataArray(np.arange(0, dataset.lat.size), dims='lat')
-        lon_subset = dataset_subset.lon.where((dataset_subset.lon >= lon_min) & (dataset_subset.lon <= lon_max),
-                                              drop=True)
-        lat_subset = dataset_subset.lat.where((dataset_subset.lat >= lat_min) & (dataset_subset.lat <= lat_max),
-                                              drop=True)
-        x1 = lon_subset.x[0]
-        x2 = lon_subset.x[-1]
-        y1 = lat_subset.y[0]
-        y2 = lat_subset.y[-1]
-        x1, y1, x2, y2 = tuple(map(int, (x1, y1, x2, y2)))
-        dataset_subset_with_x_y = dataset_subset.isel(lon=slice(x1, x2 + 1), lat=slice(y1, y2 + 1))
-        final_dataset_subset = dataset_subset_with_x_y.drop(['x', 'y'])
-        return final_dataset_subset
+        dataset = _normalize_lon_360(dataset)
+        if output_region:
+            self._check_bounding_box(dataset, output_region)
+            dataset_subset = dataset.copy()
+            lon_min, lat_min, lon_max, lat_max = output_region
+            dataset = dataset_subset.where((lon_min < dataset_subset.lon) & (dataset_subset.lon < lon_max)
+                                           & (lat_min < dataset_subset.lat) & (dataset_subset.lat < lat_max),
+                                           drop=True)
+        return dataset
 
     def get_reprojection_info(self, dataset: xr.Dataset) -> ReprojectionInfo:
         return ReprojectionInfo(xy_var_names=('lon', 'lat'),
@@ -347,6 +325,14 @@ class DefaultInputProcessor(XYInputProcessor):
                 count += 1
         if count == 0:
             raise ValueError(f"dataset has no variables with required dimensions {required_dims!r}")
+
+    def _check_bounding_box(self, dataset: xr.Dataset, dst_region: Tuple[float, float, float, float]):
+        lon_min, lat_min, lon_max, lat_max = dst_region
+        if lon_max <= dataset.lon.min() or lon_min >= dataset.lon.max() \
+                or lat_max <= dataset.lat.min() or lat_min >= dataset.lat.max():
+            raise ValueError(f"The output region is not within the bounds of the dataset. Skipping ...")
+
+        return dataset
 
     # noinspection PyMethodMayBeStatic
     def _check_coordinate_var(self, dataset: xr.Dataset, coord_var_name: str,

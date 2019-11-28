@@ -50,16 +50,16 @@ class DefaultInputProcessorTest(unittest.TestCase):
 
     def test_pre_process(self):
         ds1 = create_default_dataset(time_mode="time")
-        ds2 = self.processor.pre_process(ds1)
+        ds2 = self.processor.pre_process(ds1, output_region=None)
         self.assertIsNot(ds1, ds2)
         ds1 = create_default_dataset(time_mode="time_bnds")
-        ds2 = self.processor.pre_process(ds1)
+        ds2 = self.processor.pre_process(ds1, output_region=None)
         self.assertIsNot(ds1, ds2)
         ds1 = create_default_dataset(time_mode="time_coverage")
-        ds2 = self.processor.pre_process(ds1)
+        ds2 = self.processor.pre_process(ds1, output_region=None)
         self.assertIs(ds1, ds2)
         ds1 = create_default_dataset(time_mode="start_stop_time")
-        ds2 = self.processor.pre_process(ds1)
+        ds2 = self.processor.pre_process(ds1, output_region=None)
         self.assertIs(ds1, ds2)
 
     def test_post_process(self):

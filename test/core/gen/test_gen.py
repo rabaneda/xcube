@@ -145,6 +145,25 @@ class DefaultProcessTest(unittest.TestCase):
         self.assertIn('lon', ds.coords)
         self.assertFalse(np.any(ds.coords['lon'] > 180.))
 
+    def test_bounding_box_outside_dataset(self):
+        with self.assertRaises(ValueError) as e:
+            gen_cube_wrapper(
+                [get_inputdata_path('20170101-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+                 get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+                 get_inputdata_path('20170103-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+                 get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c.zarr',
+                no_sort_mode=True, output_region='14,46,16,50')
+        self.assertEqual('The output region is not within the bounds of the dataset. Skipping ...', f'{e.exception}')
+
+        with self.assertRaises(ValueError) as e:
+            gen_cube_wrapper(
+                [get_inputdata_path('20170101-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+                 get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+                 get_inputdata_path('20170103-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+                 get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c.zarr',
+                no_sort_mode=True, output_region='10,15,16,20')
+        self.assertEqual('The output region is not within the bounds of the dataset. Skipping ...', f'{e.exception}')
+
     def test_illegal_proc(self):
         with self.assertRaises(ValueError) as e:
             gen_cube_wrapper(
@@ -160,7 +179,7 @@ class DefaultProcessTest(unittest.TestCase):
 
 
 # noinspection PyShadowingBuiltins
-def gen_cube_wrapper(input_paths, output_path, no_sort_mode=False, input_processor_name=None) \
+def gen_cube_wrapper(input_paths, output_path, no_sort_mode=False, input_processor_name=None, output_region=None) \
         -> Tuple[bool, Optional[str]]:
     output = None
 
@@ -171,12 +190,15 @@ def gen_cube_wrapper(input_paths, output_path, no_sort_mode=False, input_process
         else:
             output += msg + '\n'
 
+    if not output_region:
+        output_region = '-4,47,12,56'
+
     config = get_config_dict(
         input_paths=input_paths,
         input_processor_name=input_processor_name,
         output_path=output_path,
         output_size='320,180',
-        output_region='-4,47,12,56',
+        output_region=output_region,
         output_resampling='Nearest',
         output_variables='analysed_sst',
         no_sort_mode=no_sort_mode,

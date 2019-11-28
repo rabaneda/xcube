@@ -1,3 +1,10 @@
+## Changes in 0.4.0. (in development)
+
+### Enhancment
+
+* `xcube gen` checks within the preprocessing step, if the output region is within the input dataset. 
+  If not, it is skipped, else a subset is made before continuing with the other steps. 
+
 ## Changes in 0.3.1. (in development)
 
 ### Fix
