@@ -164,6 +164,17 @@ class DefaultProcessTest(unittest.TestCase):
                 no_sort_mode=True, output_region='10,15,16,20')
         self.assertEqual('The output region is not within the bounds of the dataset. Skipping ...', f'{e.exception}')
 
+    def test_bounding_box_including_dataset(self):
+        status, output = gen_cube_wrapper(
+            [get_inputdata_path('20170101-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+             get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+             get_inputdata_path('20170103-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+             get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c.zarr',
+            no_sort_mode=True, output_region='-18.5,37,14.5,66')
+        self.assertEqual(True, status)
+        ds = xr.open_zarr('l2c.zarr')
+        self.assertIn('lon', ds.coords)
+
     def test_illegal_proc(self):
         with self.assertRaises(ValueError) as e:
             gen_cube_wrapper(

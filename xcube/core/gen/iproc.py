@@ -259,12 +259,13 @@ class DefaultInputProcessor(XYInputProcessor):
             dataset = dataset.squeeze("time")
         dataset = _normalize_lon_360(dataset)
         if output_region:
-            self._check_bounding_box(dataset, output_region)
-            dataset_subset = dataset.copy()
-            lon_min, lat_min, lon_max, lat_max = output_region
-            dataset = dataset_subset.where((lon_min < dataset_subset.lon) & (dataset_subset.lon < lon_max)
-                                           & (lat_min < dataset_subset.lat) & (dataset_subset.lat < lat_max),
-                                           drop=True)
+            make_subset = _check_bounding_box(dataset, output_region)
+            if make_subset:
+                dataset_subset = dataset.copy()
+                lon_min, lat_min, lon_max, lat_max = output_region
+                dataset = dataset_subset.where((lon_min < dataset_subset.lon) & (dataset_subset.lon < lon_max)
+                                               & (lat_min < dataset_subset.lat) & (dataset_subset.lat < lat_max),
+                                               drop=True)
         return dataset
 
     def get_reprojection_info(self, dataset: xr.Dataset) -> ReprojectionInfo:
@@ -326,14 +327,6 @@ class DefaultInputProcessor(XYInputProcessor):
         if count == 0:
             raise ValueError(f"dataset has no variables with required dimensions {required_dims!r}")
 
-    def _check_bounding_box(self, dataset: xr.Dataset, dst_region: Tuple[float, float, float, float]):
-        lon_min, lat_min, lon_max, lat_max = dst_region
-        if lon_max <= dataset.lon.min() or lon_min >= dataset.lon.max() \
-                or lat_max <= dataset.lat.min() or lat_min >= dataset.lat.max():
-            raise ValueError(f"The output region is not within the bounds of the dataset. Skipping ...")
-
-        return dataset
-
     # noinspection PyMethodMayBeStatic
     def _check_coordinate_var(self, dataset: xr.Dataset, coord_var_name: str,
                               min_length: int = None, max_length: int = None):
@@ -385,6 +378,18 @@ def _normalize_lon_360(dataset: xr.Dataset) -> xr.Dataset:
     dataset = dataset.assign_coords(lon=(((dataset.lon + 180) % 360) - 180))
 
     return dataset
+
+
+def _check_bounding_box(dataset: xr.Dataset, dst_region: Tuple[float, float, float, float]):
+    lon_min, lat_min, lon_max, lat_max = dst_region
+    make_subset = True
+    if lon_max <= dataset.lon.min() or lon_min >= dataset.lon.max() \
+            or lat_max <= dataset.lat.min() or lat_min >= dataset.lat.max():
+        raise ValueError(f"The output region is not within the bounds of the dataset. Skipping ...")
+    if lon_min < dataset.lon.min() and lat_min < dataset.lat.min() \
+            and lon_max > dataset.lon.max() and lat_max > dataset.lat.max():
+        make_subset = False
+    return make_subset
 
 
 def find_input_processor(name: str):
