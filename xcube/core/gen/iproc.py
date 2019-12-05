@@ -120,7 +120,7 @@ class InputProcessor(ExtensionComponent, metaclass=ABCMeta):
         """
         return None
 
-    def pre_process(self, dataset: xr.Dataset, output_region: Tuple[float, float, float, float]) -> xr.Dataset:
+    def pre_process(self, dataset: xr.Dataset, output_region: Tuple[float, float, float, float], monitor) -> xr.Dataset:
         """
         Do any pre-processing before reprojection.
         All variables in the output dataset must be 2D arrays with dimensions "lat" and "lon", in this order.
@@ -252,7 +252,7 @@ class DefaultInputProcessor(XYInputProcessor):
     def input_reader(self) -> str:
         return self._input_reader
 
-    def pre_process(self, dataset: xr.Dataset, output_region: Tuple[float, float, float, float]) -> xr.Dataset:
+    def pre_process(self, dataset: xr.Dataset, output_region: Tuple[float, float, float, float], monitor) -> Union[xr.Dataset, bool]:
         self._validate(dataset)
         if "time" in dataset:
             # Remove time dimension of length 1.
@@ -266,6 +266,9 @@ class DefaultInputProcessor(XYInputProcessor):
                 dataset = dataset_subset.where((lon_min < dataset_subset.lon) & (dataset_subset.lon < lon_max)
                                                & (lat_min < dataset_subset.lat) & (dataset_subset.lat < lat_max),
                                                drop=True)
+            if make_subset is None:
+                monitor(f"The output region is not within the bounds of the dataset. Skipping ...")
+                return False
         return dataset
 
     def get_reprojection_info(self, dataset: xr.Dataset) -> ReprojectionInfo:
@@ -385,7 +388,7 @@ def _check_bounding_box(dataset: xr.Dataset, dst_region: Tuple[float, float, flo
     make_subset = True
     if lon_max <= dataset.lon.min() or lon_min >= dataset.lon.max() \
             or lat_max <= dataset.lat.min() or lat_min >= dataset.lat.max():
-        raise ValueError(f"The output region is not within the bounds of the dataset. Skipping ...")
+        return None
     if lon_min < dataset.lon.min() and lat_min < dataset.lat.min() \
             and lon_max > dataset.lon.max() and lat_max > dataset.lat.max():
         make_subset = False

@@ -146,23 +146,24 @@ class DefaultProcessTest(unittest.TestCase):
         self.assertFalse(np.any(ds.coords['lon'] > 180.))
 
     def test_bounding_box_outside_dataset(self):
-        with self.assertRaises(ValueError) as e:
-            gen_cube_wrapper(
-                [get_inputdata_path('20170101-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
-                 get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
-                 get_inputdata_path('20170103-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
-                 get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c.zarr',
-                no_sort_mode=True, output_region='14,46,16,50')
-        self.assertEqual('The output region is not within the bounds of the dataset. Skipping ...', f'{e.exception}')
+        status, output = gen_cube_wrapper(
+            [get_inputdata_path('20170101-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+             get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+             get_inputdata_path('20170103-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+             get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c.zarr',
+            no_sort_mode=True, output_region='14,46,16,50')
+        self.assertEqual(True, status)
+        self.assertTrue('\nThe output region is not within the bounds of the dataset. Skipping ...\n' in output)
 
-        with self.assertRaises(ValueError) as e:
-            gen_cube_wrapper(
-                [get_inputdata_path('20170101-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
-                 get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
-                 get_inputdata_path('20170103-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
-                 get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c.zarr',
-                no_sort_mode=True, output_region='10,15,16,20')
-        self.assertEqual('The output region is not within the bounds of the dataset. Skipping ...', f'{e.exception}')
+        status, output = gen_cube_wrapper(
+            [get_inputdata_path('20170101-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+             get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+             get_inputdata_path('20170103-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc'),
+             get_inputdata_path('20170102-IFR-L4_GHRSST-SSTfnd-ODYSSEA-NWE_002-v2.0-fv1.0.nc')], 'l2c.zarr',
+            no_sort_mode=True, output_region='10,15,16,20')
+        self.assertEqual(True, status)
+        self.assertTrue('\nThe output region is not within the bounds of the dataset. Skipping ...\n' in output)
+
 
     def test_bounding_box_including_dataset(self):
         status, output = gen_cube_wrapper(

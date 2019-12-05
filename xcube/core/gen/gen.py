@@ -217,7 +217,7 @@ def _process_input(input_processor: InputProcessor,
 
     # noinspection PyShadowingNames
     def step1(input_slice):
-        return input_processor.pre_process(input_slice, output_region=output_region)
+        return input_processor.pre_process(input_slice, output_region=output_region, monitor=monitor)
 
     steps.append((step1, 'pre-processing input slice'))
 
@@ -314,6 +314,8 @@ def _process_input(input_processor: InputProcessor,
             step_t1 = time.perf_counter()
             monitor(f'step {step_index + 1} of {num_steps}: {label}...')
             dataset = transform(dataset)
+            if not dataset:
+                break
             step_t2 = time.perf_counter()
             monitor(f'  {label} completed in {step_t2 - step_t1} seconds')
         total_t2 = time.perf_counter()
